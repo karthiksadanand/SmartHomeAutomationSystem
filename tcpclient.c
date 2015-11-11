@@ -10,23 +10,68 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include<pthread.h>
 #define TIME_TO_PUSH 20
 
-int max(int a,int b){
-	return b;
+/*for getting file size using stat()*/
+#include<sys/stat.h>
+
+/*for sendfile()*/
+#include<sys/sendfile.h>
+
+/*for O_RDONLY*/
+#include<fcntl.h>
+
+int gasValue = 0;
+int electricityValue = 0;
+int waterValue = 0;
+int clientId =1001;
+char receivebuffer[256],sendbuffer[256];
+int csock;
+
+
+void push_to_client(){
+
+	//code to push to client
+	char *pts;			/* pointer to time string	*/
+	time_t	now;			/* current time			*/
+	char	*ctime();
+
+	while(1){
+
+	sleep(TIME_TO_PUSH);
+
+	(void) time(&now);
+	pts = ctime(&now);
+
+	strftime(pts,strlen(pts),"%m/%d/%Y %H:%M:%S %a",localtime(&now));
+	sprintf(sendbuffer,"%s%c%d%c%d%c%d%c%s%c%d","usage",'|',waterValue,'|',gasValue,'|',electricityValue,'|',pts,'|',clientId);
+
+	send(csock, sendbuffer,sizeof(sendbuffer),0);
+	bzero(receivebuffer,sizeof(receivebuffer));
+	recv(csock, &receivebuffer,sizeof(receivebuffer),0);
+	gasValue = 0;
+	electricityValue = 0;
+	waterValue = 0;
+	printf("%s\n",receivebuffer);
+
+	}
 }
 
 int main(int argc, char *argv[]){
 
-	int csock,port,conflag,n;
-	char receivebuffer[256],sendbuffer[256];
+	int port,conflag,size;
+	char *fileptr;
+	char filename[20];
 	struct sockaddr_in server_addr;
 	struct hostent *server_name;
 	int choice,choice1,status;
-	int gasValue = 0;
+	/*int gasValue = 0;
 	int electricityValue = 0;
 	int waterValue = 0;
-	int clientId =1001;
+	int clientId =1001;*/
+	int filehandle;
+	int i = 1;
 
 	csock=socket(AF_INET,SOCK_STREAM,0);
 
@@ -53,23 +98,25 @@ int main(int argc, char *argv[]){
 		printf("Error in connecting");
 	}
 
-	int timer = 0;
-	int test=0;
+	/*int timer = 0;*/
 
 	/*------Test Start------*/
-	time_t starttime,curtime;
-	time(&starttime);
+	pthread_attr_t ta;
+	pthread_t th;
+	(void) pthread_attr_init(&ta);
+	(void) pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_DETACHED);
+	if (pthread_create(&th, &ta, (void * (*)(void *))push_to_client, NULL) < 0)
+		printf("Thread error \n");
 
 	while(1){
 
-		time(&curtime);
+		/*time(&curtime);
 		printf("difference time is %g",difftime(curtime,starttime));
-		if(difftime(curtime,starttime)>=TIME_TO_PUSH){ printf("while 1 time complete"); time(&starttime); test=1;}
+		if(difftime(curtime,starttime)>=TIME_TO_PUSH){ printf("while 1 time complete"); time(&starttime); timer=1;}*/
 
 		printf("Enter a choice:\n1- Activities\n2- Generate a Report\n3- quit\n");
 
 		scanf("%d",&choice);
-
 
 		switch(choice)
 		{
@@ -80,122 +127,105 @@ int main(int argc, char *argv[]){
 			 while(1)
 			 {
 
-				 time(&curtime);
+				 /*time(&curtime);
 				 printf("difference time is %g",difftime(curtime,starttime));
-				 if(difftime(curtime,starttime)>=TIME_TO_PUSH){ printf("while 2 time complete"); time(&starttime); timer=1;}
+				 if(difftime(curtime,starttime)>=TIME_TO_PUSH){ printf("while 2 time complete"); time(&starttime); timer=1;}*/
 
 			  printf("Enter a choice:\n1- Bathing\n2- Washing Machine\n3- Dish Washing\n4- Lighting\n5- Air Conditioner\n"
 					  "6- Electronic Devices\n7- Cooking\n8- Water Heater\n9- Back\n");
 			  scanf("%d",&choice1);
 
-
+			  int test=0;
 
 			  switch(choice1)
 				{
 
 				case 1:
 
-				  printf("Bathing\n");
+				  printf("Bathing Used\n");
 				  waterValue = waterValue + 30;
 
 				  break;
 
 				case 2:
 
-				  printf("Washing\n");
+				  printf("Washing Used\n");
 				  waterValue = waterValue + 10;
 
 				  break;
 
 				case 3:
 
-				  printf("Dish Washing\n");
+				  printf("Dish Washing Used\n");
 				  waterValue = waterValue + 20;
 
 				  break;
 
 				case 4:
 
-				  printf("Lighting\n");
+				  printf("Lighting Used\n");
 				  electricityValue = electricityValue + 60;
 
 				  break;
 
 				case 5:
 
-				  printf("Air Conditioner\n");
+				  printf("Air Conditioner Used\n");
 				  electricityValue = electricityValue + 30;
 
 				  break;
 
 				case 6:
 
-				  printf("Electronic Devices\n");
+				  printf("Electronic Devices Used\n");
 				  electricityValue = electricityValue + 10;
 
 				  break;
 
 				case 7:
 
-				  printf("Cooking\n");
+				  printf("Cooking Used\n");
 				  gasValue = gasValue + 40;
 
 				  break;
 
 				case 8:
 
-				  printf("Water Heater\n");
+				  printf("Water Heater Used\n");
 				  gasValue = gasValue + 20;
-
 				  break;
 
 				case 9:
 
 				  printf("Back\n");
+				  test=1;
 				  break;
 
 				}
-			  printf("Timer = %d",timer);
-			  if(timer){
-				char *pts;			/* pointer to time string	*/
-				time_t	now;			/* current time			*/
+
+			  /*if(timer){
+
+				char *pts;			 pointer to time string
+				time_t	now;			 current time
 				char	*ctime();
 
 				(void) time(&now);
 				pts = ctime(&now);
 
 				strftime(pts,strlen(pts),"%m/%d/%Y %H:%M:%S %a",localtime(&now));
-				sprintf(sendbuffer,"%d%c%d%c%d%c%s%c%d",waterValue,'|',gasValue,'|',electricityValue,'|',pts,'|',clientId);
+				sprintf(sendbuffer,"%s%c%d%c%d%c%d%c%s%c%d","usage",'|',waterValue,'|',gasValue,'|',electricityValue,'|',pts,'|',clientId);
+
 				send(csock, sendbuffer,sizeof(sendbuffer),0);
-				bzero(sendbuffer,sizeof(sendbuffer));
-				recv(csock, &receivebuffer, sizeof(receivebuffer), 0);
-				printf("The buffer in Client is:: %s\n",receivebuffer);
+				bzero(receivebuffer,sizeof(receivebuffer));
+				recv(csock, &receivebuffer,sizeof(receivebuffer),0);
+				gasValue = 0;
+				electricityValue = 0;
+				waterValue = 0;
+				printf("%s\n",receivebuffer);
 
-				waterValue=gasValue=electricityValue=0;
-				timer=0;
-				time(&starttime);
-
-			  }
+			  }*/
 
 			  if(test){
-
-				  char *pts;			/* pointer to time string	*/
-				  time_t	now;			/* current time			*/
-				  char	*ctime();
-
-				  (void) time(&now);
-				  pts = ctime(&now);
-
-				  strftime(pts,strlen(pts),"%m/%d/%Y %H:%M:%S %a",localtime(&now));
-				  sprintf(sendbuffer,"%d%c%d%c%d%c%s%c%d",waterValue,'|',gasValue,'|',electricityValue,'|',pts,'|',clientId);
-				  send(csock, sendbuffer,sizeof(sendbuffer),0);
-				  bzero(sendbuffer,sizeof(sendbuffer));
-				  recv(csock, &receivebuffer, sizeof(receivebuffer), 0);
-				  printf("The buffer in Client is:: %s\n",receivebuffer);
-
-				  waterValue=gasValue=electricityValue=0;
-				  time(&starttime);
-
 				  test = 0;
 				  break;
 			  }
@@ -214,27 +244,95 @@ int main(int argc, char *argv[]){
 				  printf("Enter a choice:\n1- Text Report\n2- Graph Report\n3- Back\n");
 				  scanf("%d",&choice1);
 
+				  int test=0;
 
 				  switch(choice1)
 					{
 
 				  	  case 1:
 
-				  	  printf("Text Report\n");
-				  	  strcpy(sendbuffer, "text");
-				  	  send(csock, sendbuffer, 100, 0);
-				  	  break;
+				  	  sprintf(sendbuffer,"%s%c%d","text",'|',clientId);
+					  send(csock, sendbuffer, 100, 0);
+
+					  bzero(receivebuffer,sizeof(receivebuffer));
+					  recv(csock, receivebuffer, sizeof(receivebuffer), 0);
+
+					  strcpy(filename,receivebuffer);
+
+					  send(csock, receivebuffer, 100, 0);
+
+					  recv(csock, &size, sizeof(int), 0);
+
+					  if(!size)
+					  {
+						  printf("No such file on the remote directory\n\n");
+						  break;
+					  }
+
+					  fileptr = malloc(size);
+					  recv(csock, fileptr, size, 0);
+
+					  while(1)
+					  {
+						  filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
+						  if(filehandle == -1)
+						  {
+							  sprintf(filename + strlen(filename), "%d", i);//needed only if same directory is used for both server and client
+						  }
+						  else break;
+					  }
+
+					  write(filehandle, fileptr, size);
+					  close(filehandle);
+
+					  printf("The file %s has been downloaded\n",filename);
+
+					  break;
 
 				  	  case 2:
 
-					  printf("Graph Report\n");
-					  strcpy(sendbuffer, "graph");
+					  sprintf(sendbuffer,"%s%c%d","graph",'|',clientId);
 					  send(csock, sendbuffer, 100, 0);
+
+					  bzero(receivebuffer,sizeof(receivebuffer));
+					  recv(csock, receivebuffer, sizeof(receivebuffer), 0);
+
+					  strcpy(filename,receivebuffer);
+
+					  send(csock, receivebuffer, 100, 0);
+
+					  recv(csock, &size, sizeof(int), 0);
+
+					  if(!size)
+					  {
+						  printf("No such file on the remote directory\n\n");
+						  break;
+					  }
+
+					  fileptr = malloc(size);
+					  recv(csock, fileptr, size, 0);
+
+					  while(1)
+					  {
+						  filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
+						  if(filehandle == -1)
+						  {
+							  sprintf(filename + strlen(filename), "%d", i);//needed only if same directory is used for both server and client
+						  }
+						  else break;
+					  }
+
+					  write(filehandle, fileptr, size);
+					  close(filehandle);
+
+					  printf("The file %s has been downloaded\n",filename);
+
 					  break;
 
 				  	  case 3:
 
 					  printf("Back\n");
+					  test = 1;
 					  break;
 
 					}
@@ -254,15 +352,16 @@ int main(int argc, char *argv[]){
 			  recv(csock, &status, 100, 0);
 
 			  if(status){
-				  printf("Server closed\nQuitting..\n");
+				  printf("Client is closed\nQuitting..\n");
 				  exit(0);
 			  }
 
-			  printf("Server failed to close connection\n");
+			  printf("Client failed to close connection\n");
 
 		}
 
 	}
+	pthread_cancel(th);
 
 
 	/*------Test End------*/
