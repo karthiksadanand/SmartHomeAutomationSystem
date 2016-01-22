@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include<pthread.h>
-#define TIME_TO_PUSH 20
+#define TIME_TO_PUSH 30
 
 /*for getting file size using stat()*/
 #include<sys/stat.h>
@@ -66,23 +66,26 @@ int main(int argc, char *argv[]){
 	struct sockaddr_in server_addr;
 	struct hostent *server_name;
 	int choice,choice1,status;
-	/*int gasValue = 0;
-	int electricityValue = 0;
-	int waterValue = 0;
-	int clientId =1001;*/
 	int filehandle;
 	int i = 1;
+
+	if(argc < 3){
+		printf("Please enter in the form of \"./tcpclient host_IP(localhost) port_number\" \n");
+		exit(-1);
+	}
 
 	csock=socket(AF_INET,SOCK_STREAM,0);
 
 	if(csock==-1){
 		printf("socket failure\n");
+		exit(-1);
 	}
 
 	server_name=gethostbyname(argv[1]);
 
 	if(server_name==NULL){
-		printf("No host found");
+		printf("No host found\n");
+		exit(-1);
 	}
 
 	port=atoi(argv[2]);
@@ -95,7 +98,8 @@ int main(int argc, char *argv[]){
 	conflag=connect(csock,(struct sockaddr *)&server_addr,sizeof(server_addr));
 
 	if(conflag<0){
-		printf("Error in connecting");
+		printf("Error in connecting to Server...\n");
+		exit(-1);
 	}
 
 	/*int timer = 0;*/
@@ -110,10 +114,6 @@ int main(int argc, char *argv[]){
 
 	while(1){
 
-		/*time(&curtime);
-		printf("difference time is %g",difftime(curtime,starttime));
-		if(difftime(curtime,starttime)>=TIME_TO_PUSH){ printf("while 1 time complete"); time(&starttime); timer=1;}*/
-
 		printf("Enter a choice:\n1- Activities\n2- Generate a Report\n3- quit\n");
 
 		scanf("%d",&choice);
@@ -126,10 +126,6 @@ int main(int argc, char *argv[]){
 
 			 while(1)
 			 {
-
-				 /*time(&curtime);
-				 printf("difference time is %g",difftime(curtime,starttime));
-				 if(difftime(curtime,starttime)>=TIME_TO_PUSH){ printf("while 2 time complete"); time(&starttime); timer=1;}*/
 
 			  printf("Enter a choice:\n1- Bathing\n2- Washing Machine\n3- Dish Washing\n4- Lighting\n5- Air Conditioner\n"
 					  "6- Electronic Devices\n7- Cooking\n8- Water Heater\n9- Back\n");
@@ -201,29 +197,12 @@ int main(int argc, char *argv[]){
 				  test=1;
 				  break;
 
+				default:
+
+				  printf("Please Enter a Valid choice\n");
+				  break;
+
 				}
-
-			  /*if(timer){
-
-				char *pts;			 pointer to time string
-				time_t	now;			 current time
-				char	*ctime();
-
-				(void) time(&now);
-				pts = ctime(&now);
-
-				strftime(pts,strlen(pts),"%m/%d/%Y %H:%M:%S %a",localtime(&now));
-				sprintf(sendbuffer,"%s%c%d%c%d%c%d%c%s%c%d","usage",'|',waterValue,'|',gasValue,'|',electricityValue,'|',pts,'|',clientId);
-
-				send(csock, sendbuffer,sizeof(sendbuffer),0);
-				bzero(receivebuffer,sizeof(receivebuffer));
-				recv(csock, &receivebuffer,sizeof(receivebuffer),0);
-				gasValue = 0;
-				electricityValue = 0;
-				waterValue = 0;
-				printf("%s\n",receivebuffer);
-
-			  }*/
 
 			  if(test){
 				  test = 0;
@@ -335,6 +314,9 @@ int main(int argc, char *argv[]){
 					  test = 1;
 					  break;
 
+				  	default: printf("Please Enter a Valid choice\n");
+				  			 break;
+
 					}
 
 					if(test){
@@ -357,12 +339,16 @@ int main(int argc, char *argv[]){
 			  }
 
 			  printf("Client failed to close connection\n");
+			  break;
 
+
+			default: printf("Please Enter a Valid choice\n");
+					 break;
 		}
 
 	}
-	pthread_cancel(th);
 
+	pthread_cancel(th);
 
 	/*------Test End------*/
 
@@ -370,4 +356,3 @@ int main(int argc, char *argv[]){
 
 	return 0;
 }
-

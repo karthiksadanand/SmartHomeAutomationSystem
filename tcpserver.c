@@ -43,6 +43,11 @@ int main(int argc, char *argv[]){
     int nfds = getdtablesize();
 	pthread_t thread1;
 
+	if(argc < 2){
+		printf("Please enter in the form of \"./tcpserver port_number\" \n");
+		exit(-1);
+	}
+
 	sd=socket(PF_INET,SOCK_STREAM,0);
 
 	if(sd<0){
@@ -120,11 +125,10 @@ void *client_req(void* arg)
 
 		if(!strcmp(buff, "quit"))
 		{
-		  //printf("Server quitting..\n");
 		  int i = 1;
 		  send(csock, &i, sizeof(int), 0);
-		  //exit(0);
 		}
+
 		if(!strncmp(buff,"usage",5))
 		{
 			char *token;
@@ -178,7 +182,7 @@ void *client_req(void* arg)
 			if(!strncmp(firstname,"water",5)) {
 				fprintf(file,"%d\t%d\t%d\t\t%s\t\t%d\n",water_val,gas_val,elec_val,time_stamp,client_id);
 			}else{
-				fprintf(file,"water\tgas\telectricity\ttime_day\t\tclient_id\n");
+				fprintf(file,"water\tgas\telectricity\ttime_day\t\t\tclient_id\n");
 				fprintf(file,"%d\t%d\t%d\t\t%s\t\t%d\n",water_val,gas_val,elec_val,time_stamp,client_id);
 			}
 
@@ -187,26 +191,28 @@ void *client_req(void* arg)
 
 			pthread_mutex_lock(&usage_lock);
 
+			sprintf(buff,"-----------------------------------------------------------------\n");
+
 			if(water_val > w_val) {
-				sprintf(buff, "U have crossed threshold by %0.2f%%\n" , consumption(water_val,w_val));
+				sprintf(buff, "%sYou have crossed the threshold for water by %0.2f%%\n",buff,consumption(water_val,w_val));
 			} else if(water_val < w_val){
-				sprintf(buff, "Congratulations! U have conserved %0.2f%% water\n", conservation(water_val,w_val));
+				sprintf(buff, "%sCongratulations! You have conserved %0.2f%% water\n",buff,conservation(water_val,w_val));
 			} else {
-				sprintf(buff,"Your current water usage is equal to threshold\n");
+				sprintf(buff,"%sYour current water usage is equal to threshold\n",buff);
 			}
 
 			if(gas_val > g_val) {
-				sprintf(buff, "%s\n U have crossed threshold by %0.2f%% \n",buff,consumption(gas_val,g_val));
+				sprintf(buff, "%s\nYou have crossed the threshold for gas by %0.2f%%\n",buff,consumption(gas_val,g_val));
 			} else if(gas_val < g_val){
-				sprintf(buff, "%s\nCongratulations!U have conserved %0.2f%% gas\n",buff, conservation(gas_val,g_val));
+				sprintf(buff, "%s\nCongratulations! You have conserved %0.2f%% gas\n",buff,conservation(gas_val,g_val));
 			} else {
 				sprintf(buff,"%s\nYour current gas usage is equal to threshold\n",buff);
 			}
 
 			if(elec_val > e_val) {
-				sprintf(buff, "%s\n U have crossed threshold %0.2f%%\n",buff,consumption(elec_val,e_val));
+				sprintf(buff, "%s\nYou have crossed the threshold for electricity by %0.2f%%\n",buff,consumption(elec_val,e_val));
 			} else if(elec_val < e_val){
-				sprintf(buff, "%s\nCongratulations! U have conserved %0.2f%% electricity\n",buff, conservation(elec_val,e_val));
+				sprintf(buff, "%s\nCongratulations! You have conserved %0.2f%% electricity\n",buff,conservation(elec_val,e_val));
 			} else {
 				sprintf(buff,"%s\nYour current electricity usage is equal to threshold\n",buff);
 			}
@@ -319,7 +325,7 @@ void *client_req(void* arg)
 			 write(csock,buff,strlen(buff));
 
 			 read(csock,buff,sizeof(buff));
-			char timefmt[]="%m/%d/%Y %H:%M:%S";
+			 char timefmt[]="%m/%d/%Y %H:%M:%S";
 			 gnuplot_ctrl * g = gnuplot_init();
 			 gnuplot_cmd(g, "set terminal png");
 			 gnuplot_cmd(g, "set output \"%s\"",str1);
@@ -352,6 +358,7 @@ void *client_req(void* arg)
 
 		}
 	}
+
 }
 
 float conservation(int value,int threshold) {
